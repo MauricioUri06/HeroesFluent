@@ -1,4 +1,5 @@
 using HeroesFluent.Data;
+using HeroesFluent.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +9,8 @@ builder.Services.AddControllersWithViews();
 
 builder.Services.AddDbContext<HeroesDbContext>(options => 
     options.UseSqlServer(builder.Configuration.GetConnectionString("HeroesFluent")));
+
+builder.Services.AddScoped<HeroeConsultas>();
 
 var app = builder.Build();
 

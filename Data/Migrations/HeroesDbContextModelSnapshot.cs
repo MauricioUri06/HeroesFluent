@@ -79,6 +79,9 @@ namespace HeroesFluent.Data.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("nvarchar(60)");
 
+                    b.Property<string>("Ciudad")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int?>("EquipoId")
                         .HasColumnType("int");
 
