@@ -119,56 +119,110 @@ public class HeroeConsultas
             .Select(h => new {h.Alias, h.NivelPoder})
             .ToListAsync();
     }
-
-    // ───────────── Nivel 3 — Relaciones y agrupación ─────────────
+    
 
     // 11.
     public async Task<object?> Consulta11HeroesConEquipoAsync()
     {
-        // TODO: cada héroe con el nombre de su equipo ("Sin equipo" si no tiene)
-        throw new NotImplementedException();
+        return await _context.Heroes
+            .AsNoTracking()
+            .Select(h => new {h.Alias, Equipo = h.Equipo != null ? h.Equipo.Nombre : "Sin Equipo"})
+            .ToListAsync();
     }
 
     // 12.
     public async Task<object?> Consulta12ResumenPorEquipoAsync()
     {
-        // TODO: por equipo: nombre, cantidad de héroes y nivel promedio; del promedio más alto al más bajo
-        throw new NotImplementedException();
+        return await _context.Heroes
+            .AsNoTracking()
+            .Where(h => h.EquipoId != null)
+            .GroupBy(h => h.Equipo!.Nombre)
+            .Select(g => new
+            {
+                Nombre = g.Key,
+                Cantidad = g.Count(),
+                Promedio = g.Average(g => g.NivelPoder)
+            })
+            .OrderByDescending(h => h.Promedio)
+            .ToListAsync();
     }
 
     // 13.
     public async Task<object?> Consulta13MisionesConHeroesAsync()
     {
-        // TODO: cada misión con título, dificultad (texto) y héroes asignados con su rol, ordenados por alias
-        throw new NotImplementedException();
+        return await _context.Misiones
+            .AsNoTracking()
+            .OrderBy(m => m.Id)
+            .Select(m => new
+            {
+                m.Titulo,
+                Dificultad = m.Dificultad.ToString(),
+                Heroes = m.HeroeMisiones
+                    .OrderBy(hm => hm.Heroe.Alias)
+                    .Select(hm => new { hm.Heroe.Alias, hm.Rol })
+                    .ToList()
+            })
+            .ToListAsync();
     }
 
     // 14.
     public async Task<object?> Consulta14SinMisionesAsync()
     {
-        // TODO: héroes sin ninguna misión asignada
-        throw new NotImplementedException();
+        return await _context.Heroes
+            .AsNoTracking()
+            .Where(h => !h.HeroeMisiones.Any())
+            .OrderBy(h => h.Alias)
+            .Select(h => new { h.Alias, h.NivelPoder })
+            .ToListAsync();
     }
 
     // 15.
     public async Task<object?> Consulta15FichaAsync(int heroeId)
     {
-        // TODO: ficha (alias, nivel, equipo, misiones con rol) con Include y ThenInclude; null si no existe
-        throw new NotImplementedException();
+        var heroe = await _context.Heroes
+            .AsNoTracking()
+            .Include(h => h.Equipo)
+            .Include(h => h.HeroeMisiones).ThenInclude(hm => hm.Mision)
+            .FirstOrDefaultAsync(h => h.Id == heroeId);
+
+        if (heroe is null)
+        {
+            return null;
+        }
+
+        return new
+        {
+            heroe.Alias,
+            Nivel = heroe.NivelPoder,
+            Equipo = heroe.Equipo != null ? heroe.Equipo.Nombre : "Sin equipo",
+            Misiones = heroe.HeroeMisiones
+                .Select(hm => new { hm.Mision.Titulo, hm.Rol })
+                .ToList()
+        };
     }
 
     // 16.
     public async Task<object?> Consulta16MisionesAltaOExtremaAsync()
     {
-        // TODO: héroes en al menos una misión Alta o Extrema, sin repetir, ordenados por alias
-        throw new NotImplementedException();
+        return await _context.Heroes
+            .AsNoTracking()
+            .Where(h => h.HeroeMisiones.Any(hm =>
+                hm.Mision.Dificultad == Dificultad.Alta ||
+                hm.Mision.Dificultad == Dificultad.Extrema))
+            .OrderBy(h => h.Alias)
+            .Select(h => new { h.Alias, h.NivelPoder })
+            .ToListAsync();
     }
 
     // 17.
     public async Task<object?> Consulta17DosOMasMisionesAsync()
     {
-        // TODO: alias y cantidad de misiones de los héroes con 2 o más misiones, ordenados por alias
-        throw new NotImplementedException();
+        return await _context.Heroes
+            .AsNoTracking()
+            .Where(h => h.HeroeMisiones.Count >= 2)
+            .OrderBy(h => h.Alias)
+            .Select(h => new { h.Alias, CantidadMisiones = h.HeroeMisiones.Count })
+            .ToListAsync();
     }
 
     // ───────────── Nivel 4 — Fechas, paginación y ranking ─────────────
@@ -176,21 +230,48 @@ public class HeroeConsultas
     // 18.
     public async Task<object?> Consulta18MisionesConFechaAsync()
     {
-        // TODO: misiones con fecha límite, de la más próxima a la más lejana (título y fecha)
-        throw new NotImplementedException();
+        return await _context.Misiones
+            .AsNoTracking()
+            .Where(m => m.FechaLimite != null)
+            .OrderBy(m => m.FechaLimite)
+            .Select(m => new { m.Titulo, m.FechaLimite })
+            .ToListAsync();
     }
 
     // 19.
     public async Task<object?> Consulta19PaginaAsync(int pagina, int tamano)
     {
-        // TODO: página de héroes ordenados por alias + total de páginas (página mínima 1, tamaño de 1 a 50)
-        throw new NotImplementedException();
+        pagina = Math.Max(1, pagina);
+        tamano = Math.Clamp(tamano, 1, 50);
+
+        var totalHeroes = await _context.Heroes.CountAsync();
+        var totalPaginas = (int)Math.Ceiling(totalHeroes / (double)tamano);
+
+        var heroes = await _context.Heroes
+            .AsNoTracking()
+            .OrderBy(h => h.Alias)
+            .Skip((pagina - 1) * tamano)
+            .Take(tamano)
+            .Select(h => new { h.Alias, h.NivelPoder })
+            .ToListAsync();
+
+        return new
+        {
+            Pagina = pagina,
+            Tamano = tamano,
+            TotalPaginas = totalPaginas,
+            Heroes = heroes
+        };
     }
 
     // 20.
     public async Task<object?> Consulta20Top3Async()
     {
-        // TODO: los 3 héroes con mayor poder, cada uno con su cantidad de misiones
-        throw new NotImplementedException();
+        return await _context.Heroes
+            .AsNoTracking()
+            .OrderByDescending(h => h.NivelPoder)
+            .Take(3)
+            .Select(h => new { h.Alias, h.NivelPoder, CantidadMisiones = h.HeroeMisiones.Count })
+            .ToListAsync();
     }
 }

@@ -14,6 +14,18 @@ builder.Services.AddScoped<HeroeConsultas>();
 
 var app = builder.Build();
 
+await using var scope = app.Services.CreateAsyncScope();
+var context = scope.ServiceProvider.GetRequiredService<HeroesDbContext>();
+if (context.Heroes.Count() <= 34)
+{
+    await HeroeSeeder.InicializarAsync(context, 20);
+}
+
+if (context.Equipos.Count() < 15)
+{
+    await EquipoSeeder.InicializarAsync(context, 20);
+}
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
